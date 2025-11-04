@@ -39,8 +39,13 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install JS dependencies
-        run: npm ci
+      - name: Install JS dependencies (use ci if lock exists)
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install --no-audit --no-fund
+          fi
 
       - name: Build theme assets (CSS/JS)
         run: npm run build
