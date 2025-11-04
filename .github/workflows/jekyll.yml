@@ -1,6 +1,8 @@
 name: Deploy Jekyll site to Pages
+
 on:
-  push: { branches: ["main"] }
+  push:
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
@@ -8,30 +10,40 @@ permissions:
   pages: write
   id-token: write
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Mark workspace safe
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - uses: ruby/setup-ruby@v1
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.2"
-          bundler-cache: false
-      - name: Install Bundler 2.7.2
-        run: |
-          gem install bundler:2.7.2
-          bundle _2.7.2_ --version
-      - name: Bundle install (add linux platform)
-        run: |
-          bundle _2.7.2_ lock --add-platform x86_64-linux || true
-          bundle _2.7.2_ install --jobs 4 --retry 3 --verbose
+          bundler: "2.7.2"
+          bundler-cache: true
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
       - name: Build with Jekyll
-        run: bundle _2.7.2_ exec jekyll build --trace
-        env: { JEKYLL_ENV: production }
-      - uses: actions/upload-pages-artifact@v3
-        with: { path: _site }
+        env:
+          JEKYLL_ENV: production
+          BUNDLE_WITHOUT: development:test
+        run: bundle exec jekyll build --trace
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
 
   deploy:
     needs: build
@@ -40,5 +52,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - id: deployment
+      - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
